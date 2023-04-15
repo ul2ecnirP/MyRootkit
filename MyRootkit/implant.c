@@ -35,6 +35,13 @@ PVOID SelfGetModuleHandle(PCWSTR name) {
     }
     return NULL;
 }
+PVOID SelfGetProcAddress(HMODULE module, PCWSTR name) {
+    //module = LoadLibraryEx("ntdll.dll", NULL, DONT_RESOLVE_DLL_REFERENCES);
+    PIMAGE_NT_HEADERS header = (PIMAGE_NT_HEADERS)((BYTE*)module + ((PIMAGE_DOS_HEADER)module)->e_lfanew);
+
+    PIMAGE_EXPORT_DIRECTORY exports = (PIMAGE_EXPORT_DIRECTORY)((BYTE*)module + header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
+
+}
 
 typedef
 double
@@ -45,12 +52,6 @@ double
 
 
 int main() {
-    /*
-    PCWSTR *path = L"C:\\WINDOWS\\SYSTEM32\\ntdll.dll";
-    PCWSTR* filename;
-    filename = wcsrchr(path, L'\\') + 1;
-    printf("%ls", filename);
-    */
 
     HMODULE dllBase = (HMODULE)SelfGetModuleHandle(L"ntdll.dll");
     if (dllBase == NULL) {
@@ -60,8 +61,8 @@ int main() {
         POW pow = (POW)GetProcAddress(dllBase, "pow");
         printf("%f\n", pow(2.0, 3.0));
     }
-    printf("\nFinish !");
-
+    printf("\nFinish !\n");
+    SelfGetProcAddress(dllBase, "test");
     //SYSTEM_LOAD_AND_CALL_IMAGE Image;
     //WCHAR mypath[] = L"./driver.sys";
     //RTLINITUNICODESTRING RtlInitUnicodeString = (RTLINITUNICODESTRING)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlInitUnicodeString");
