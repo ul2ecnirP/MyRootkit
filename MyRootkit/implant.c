@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdint.h>
 #include <Windows.h>
 #include <winternl.h>
 #include <shlwapi.h>
@@ -35,14 +36,28 @@ PVOID SelfGetModuleHandle(PCWSTR name) {
     }
     return NULL;
 }
-PVOID SelfGetProcAddress(HMODULE module, PCWSTR name) {
-    //module = LoadLibraryEx("ntdll.dll", NULL, DONT_RESOLVE_DLL_REFERENCES);
-    PIMAGE_NT_HEADERS header = (PIMAGE_NT_HEADERS)((BYTE*)module + ((PIMAGE_DOS_HEADER)module)->e_lfanew);
-
-    PIMAGE_EXPORT_DIRECTORY exports = (PIMAGE_EXPORT_DIRECTORY)((BYTE*)module + header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
-
+PVOID SelfGetProcAddress(HMODULE module, char * name) {
+    PIMAGE_NT_HEADERS NtHeaders = (PIMAGE_NT_HEADERS)((uint8_t*)module + ((PIMAGE_DOS_HEADER)module)->e_lfanew);//get imageNtHeader from DOS_HEADER (e_lfanew = logical file address) (entire dll relocated)
+    PIMAGE_OPTIONAL_HEADER imageOptionalHeader = (PIMAGE_OPTIONAL_HEADER)&NtHeaders->OptionalHeader; //getting closer of Export directory by reading OptionalHeader
+    PIMAGE_DATA_DIRECTORY imageDataDirectory = &(imageOptionalHeader->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT/*winnt.h*/]);//first element (index0) of Optional header array is the exort table
+    PIMAGE_EXPORT_DIRECTORY imageExportDirectory = (PIMAGE_EXPORT_DIRECTORY)((uint8_t*)module + imageDataDirectory->VirtualAddress);//getting the RVA (Relative Virtual Adress)
+    /*3 arrays of the same size */
+    PDWORD exportAddressTable = (PDWORD)((uint8_t*)module + imageExportDirectory->AddressOfFunctions);//function address ( function rva)
+    PWORD /*unsigned short*/ nameOrdinalsPointer = (PWORD)((uint8_t*)module + imageExportDirectory->AddressOfNameOrdinals);//contains the address of the function by the name
+    PDWORD exportNamePointerTable = (PDWORD)((uint8_t*)module + imageExportDirectory->AddressOfNames);//pointer to the name 
+    for (size_t nameIndex = 0; nameIndex < imageExportDirectory->NumberOfNames; nameIndex++)
+    {
+        char* exportname = (char*)((uint8_t*)module + exportNamePointerTable[nameIndex]);
+        if (strcmp(name, exportname) == 0) {
+            DWORD ordinal = nameOrdinalsPointer[nameIndex];
+            PDWORD targetFunctionAddress = (PDWORD)((uint8_t*)module + exportAddressTable[ordinal]);
+            return targetFunctionAddress;
+        }
+    }
+    return NULL;
 }
-
+/*https://res.cloudinary.com/practicaldev/image/fetch/s--sMtYPRHi--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ahb7ncw4rop0ogid77t2.png
+*/
 typedef
 double
 (__stdcall* POW)(
@@ -58,11 +73,11 @@ int main() {
         printf("Error %p\n", dllBase);
     }
     else {
-        POW pow = (POW)GetProcAddress(dllBase, "pow");
+        POW pow = (POW)SelfGetProcAddress(dllBase, "pow");
         printf("%f\n", pow(2.0, 3.0));
     }
+    //SelfGetProcAddress(dllBase, "pow");
     printf("\nFinish !\n");
-    SelfGetProcAddress(dllBase, "test");
     //SYSTEM_LOAD_AND_CALL_IMAGE Image;
     //WCHAR mypath[] = L"./driver.sys";
     //RTLINITUNICODESTRING RtlInitUnicodeString = (RTLINITUNICODESTRING)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlInitUnicodeString");
