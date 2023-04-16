@@ -25,7 +25,6 @@ PVOID SelfGetModuleHandle(PCWSTR name) {
 
     PEB* pPeb = RtlGetCurrentPeb();
     PPEB_LDR_DATA pLdr = pPeb->Ldr;
-    LIST_ENTRY Lentry = pLdr->InMemoryOrderModuleList;
     PLIST_ENTRY current = pPeb->Ldr->InMemoryOrderModuleList.Flink;
     while ((current != NULL) && (current != &pPeb->Ldr->InMemoryOrderModuleList))//stackoverflow modification
     {
@@ -76,24 +75,20 @@ int main() {
         POW pow = (POW)SelfGetProcAddress(dllBase, "pow");
         printf("%f\n", pow(2.0, 3.0));
     }
-    HRSRC BmpRessource = FindResourceW(NULL, MAKEINTRESOURCEA(IDB_BITMAP1), RT_BITMAP);
-    if (!BmpRessource) {
-        printf("Error");
-        return 1;
-    }
+    HRSRC BmpRessource = FindResource(NULL, MAKEINTRESOURCE(IDB_BITMAP1), MAKEINTRESOURCE(2));
     HGLOBAL GlobalRessource = LoadResource(NULL, BmpRessource);
     if (!GlobalRessource) {
-        printf("Global Error !");
+        printf("Global Ressource Error !!!");
         return 1;
     }
-    else {
-        printf("!!!!\n");
-        uint8_t* data = malloc(sizeof(GlobalRessource));
-        memcpy(data, GlobalRessource, sizeof(GlobalRessource));
-        printf("===%c\n", data[0]);
+    size_t FileSize = SizeofResource(NULL, BmpRessource);
+    uint8_t* FilePtr = (uint8_t*)LockResource(GlobalRessource);
+    for (size_t i = 0; i < FileSize; i++)
+    {
+        printf("%x", FilePtr[i]);
     }
-    //SelfGetProcAddress(dllBase, "pow");
-    printf("\nFinished !\n");
+    //printf("%p", BmpRessource);
+    printf("\nFinish !\n");
     //SYSTEM_LOAD_AND_CALL_IMAGE Image;
     //WCHAR mypath[] = L"./driver.sys";
     //RTLINITUNICODESTRING RtlInitUnicodeString = (RTLINITUNICODESTRING)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlInitUnicodeString");
