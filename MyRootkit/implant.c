@@ -13,6 +13,7 @@
 #pragma comment(lib, "Shlwapi.lib")
 
 #include "implant_rsrc.h"
+#include "resource.h"
 
 
 PEB* RtlGetCurrentPeb(VOID)
@@ -67,7 +68,6 @@ double
 
 
 int main() {
-
     HMODULE dllBase = (HMODULE)SelfGetModuleHandle(L"ntdll.dll");
     if (dllBase == NULL) {
         printf("Error %p\n", dllBase);
@@ -76,8 +76,24 @@ int main() {
         POW pow = (POW)SelfGetProcAddress(dllBase, "pow");
         printf("%f\n", pow(2.0, 3.0));
     }
+    HRSRC BmpRessource = FindResourceW(NULL, MAKEINTRESOURCEA(IDB_BITMAP1), RT_BITMAP);
+    if (!BmpRessource) {
+        printf("Error");
+        return 1;
+    }
+    HGLOBAL GlobalRessource = LoadResource(NULL, BmpRessource);
+    if (!GlobalRessource) {
+        printf("Global Error !");
+        return 1;
+    }
+    else {
+        printf("!!!!\n");
+        uint8_t* data = malloc(sizeof(GlobalRessource));
+        memcpy(data, GlobalRessource, sizeof(GlobalRessource));
+        printf("===%c\n", data[0]);
+    }
     //SelfGetProcAddress(dllBase, "pow");
-    printf("\nFinish !\n");
+    printf("\nFinished !\n");
     //SYSTEM_LOAD_AND_CALL_IMAGE Image;
     //WCHAR mypath[] = L"./driver.sys";
     //RTLINITUNICODESTRING RtlInitUnicodeString = (RTLINITUNICODESTRING)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlInitUnicodeString");
