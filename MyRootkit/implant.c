@@ -32,6 +32,7 @@ PVOID SelfGetModuleHandle(uint8_t name[16]) {
         LDR_DATA_TABLE_ENTRY* module = (LDR_DATA_TABLE_ENTRY*)CONTAINING_RECORD(current, LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);//stackoverflow modification
         wmd5String((wcsrchr(module->FullDllName.Buffer, L'\\') + 1), result);
         if (memcmp(result, name, 16)) {
+            printf("Base found !!!\n");
             return module->DllBase;
         }
 
@@ -92,14 +93,25 @@ LPVOID
     HGLOBAL hResData
 );
 int main() {
-    //HMODULE ntdllBase = (HMODULE)SelfGetModuleHandle(L"ntdll.dll");
-    uint8_t data[16] = { 0xc2,0x31,0xf2,0x33,0xa8,0x60,0xbb,0x48,0x74,0x6f,0xc9,0x3d,0xbe,0x8c,0x7b,0x32 };
+    
+    uint8_t data[16] = { 0xa3,0xcb,0x33,0x79,0xad,0xcf,0x19,0x3f,0xae,0x75,0xca,0x47,0x18,0x6c,0x02 };
 
-    HMODULE kerneldllBase = (HMODULE)SelfGetModuleHandle(data);
-    if (kerneldllBase == NULL) {
-        printf("Error Kernel32.dll doesnt exist");
-        return 1;
+    HMODULE ntdllBase = (HMODULE)SelfGetModuleHandle(data);
+    
+    wchar_t* wstring = L"ntdll.dll";
+    printf("\nntdll:\n");
+    uint8_t *result = malloc(16);
+    wmd5String(wstring, result);
+    for (size_t i = 0; i < 16; i++)
+    {
+        printf("%x", result[i]);
     }
+
+    //HMODULE kerneldllBase = (HMODULE)SelfGetModuleHandle(data);
+    //if (kerneldllBase == NULL) {
+    //    printf("Error Kernel32.dll doesnt exist");
+    //    return 1;
+    //}
     /*
     if (ntdllBase == NULL) {
         printf("Error %p\n", ntdllBase);

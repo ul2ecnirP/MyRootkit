@@ -209,7 +209,7 @@ void md5String(char* input, uint8_t* result) {
 void wmd5String(wchar_t* input, uint8_t* result) {
     MD5Context ctx;
     md5Init(&ctx);
-    md5Update(&ctx, (uint8_t*)input, wstrlen(input));
+    md5Update(&ctx, (uint8_t*)input, wcslen(input));
     md5Finalize(&ctx);
 
     memcpy(result, ctx.digest, 16);
