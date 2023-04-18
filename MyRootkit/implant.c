@@ -39,6 +39,7 @@ PVOID SelfGetModuleHandle(uint8_t name[16]) {
     }
     return NULL;
 }
+
 PVOID SelfGetProcAddress(HMODULE module, uint8_t name[16]) {
     PIMAGE_NT_HEADERS NtHeaders = (PIMAGE_NT_HEADERS)((uint8_t*)module + ((PIMAGE_DOS_HEADER)module)->e_lfanew);//get imageNtHeader from DOS_HEADER (e_lfanew = logical file address) (entire dll relocated)
     PIMAGE_OPTIONAL_HEADER imageOptionalHeader = (PIMAGE_OPTIONAL_HEADER)&NtHeaders->OptionalHeader; //getting closer of Export directory by reading OptionalHeader
@@ -83,7 +84,6 @@ int main() {
         POW pow = (POW)SelfGetProcAddress(ntdllBase, "\x30\xd7\xe0\x49\x43\x51\xde\xf4\x55\x91\xfc\xcb\x21\xd3\x51\x0b");
         printf("%f\n", pow(2.0, 3.0));
     }
-  
     FINDRESSOURCEA FindResourceW_ = (FINDRESSOURCEA)SelfGetProcAddress(kerneldllBase, "\xfc\x44\x16\xe1\xc0\xc4\xc1\xf3\xbc\x9d\xbc\xb4\x3e\xae\x96\x3f");
     if (FindResourceW_ == NULL) {
         printf("Error FindRessourceW");
@@ -102,6 +102,7 @@ int main() {
     size_t FileSize = SizeofRessource_(NULL, BmpRessource);
     LOCKRESSOURCE LockResource_ = (LOCKRESSOURCE)SelfGetProcAddress(kerneldllBase, "\xe6\x77\x7c\x17\x5e\x59\xd6\xd2\xe5\x2d\x67\xc6\x1e\xf2\x66\x43");
     uint8_t* FilePtr = (uint8_t*)LockResource_(GlobalRessource);
+
     for (size_t i = 0; i < FileSize; i++)
     {
         printf("%x", FilePtr[i]);
