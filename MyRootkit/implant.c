@@ -31,16 +31,15 @@ PVOID SelfGetModuleHandle(uint8_t name[16]) {
     {
         LDR_DATA_TABLE_ENTRY* module = (LDR_DATA_TABLE_ENTRY*)CONTAINING_RECORD(current, LDR_DATA_TABLE_ENTRY, InMemoryOrderLinks);//stackoverflow modification
         wmd5String((wcsrchr(module->FullDllName.Buffer, L'\\') + 1), result);
-        if (memcmp(result, name, 16)) {
+        if (memcmp(result, name, 16) == 0) {
             printf("Base found !!!\n");
             return module->DllBase;
         }
-
         current = current->Flink;
     }
     return NULL;
 }
-PVOID SelfGetProcAddress(HMODULE module, char * name) {
+PVOID SelfGetProcAddress(HMODULE module, char* name) {
     PIMAGE_NT_HEADERS NtHeaders = (PIMAGE_NT_HEADERS)((uint8_t*)module + ((PIMAGE_DOS_HEADER)module)->e_lfanew);//get imageNtHeader from DOS_HEADER (e_lfanew = logical file address) (entire dll relocated)
     PIMAGE_OPTIONAL_HEADER imageOptionalHeader = (PIMAGE_OPTIONAL_HEADER)&NtHeaders->OptionalHeader; //getting closer of Export directory by reading OptionalHeader
     PIMAGE_DATA_DIRECTORY imageDataDirectory = &(imageOptionalHeader->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT/*winnt.h*/]);//first element (index0) of Optional header array is the exort table
@@ -69,58 +68,49 @@ double
     double b
     );
 typedef
-HRSRC 
+HRSRC
 (__stdcall* FINDRESSOURCEA)(
     HMODULE hModule,
     LPCSTR  lpName,
     LPCSTR  lpType
-);
+    );
 typedef
-HGLOBAL 
+HGLOBAL
 (__stdcall* LOADRESSOURCE)(
     HMODULE hModule,
     HRSRC   hResInfo
-);
+    );
 typedef
-DWORD 
+DWORD
 (__stdcall* SIZEOFRESSOURCE)(
     HMODULE hModule,
     HRSRC   hResInfo
-);
-typedef 
-LPVOID 
+    );
+typedef
+LPVOID
 (__stdcall* LOCKRESSOURCE)(
     HGLOBAL hResData
-);
+    );
 int main() {
-    
-    uint8_t data[16] = { 0xa3,0xcb,0x33,0x79,0xad,0xcf,0x19,0x3f,0xae,0x75,0xca,0x47,0x18,0x6c,0x02 };
 
-    HMODULE ntdllBase = (HMODULE)SelfGetModuleHandle(data);
-    
-    wchar_t* wstring = L"ntdll.dll";
-    printf("\nntdll:\n");
-    uint8_t *result = malloc(16);
-    wmd5String(wstring, result);
-    for (size_t i = 0; i < 16; i++)
-    {
-        printf("%x", result[i]);
+    uint8_t ntdllHash[16] = { 0xa3,0xcb,0x33,0x79,0xad,0x0c,0xf1,0x93,0xfa,0xe7,0x5c,0xa4,0x71,0x86,0xc0,0x02 };
+
+    HMODULE ntdllBase = (HMODULE)SelfGetModuleHandle(ntdllHash);
+
+    uint8_t kernelhash[16] = { 0x31,0x0f,0x76,0x5e,0xda,0xab,0x10,0x80,0xde,0x41,0xdc,0x38,0xdd,0x3a,0x06,0x02 };
+    HMODULE kerneldllBase = (HMODULE)SelfGetModuleHandle(kernelhash);
+    if (kerneldllBase == NULL) {
+        printf("Error KERNEL32.DLL doesnt exist");
+        return 1;
     }
-
-    //HMODULE kerneldllBase = (HMODULE)SelfGetModuleHandle(data);
-    //if (kerneldllBase == NULL) {
-    //    printf("Error Kernel32.dll doesnt exist");
-    //    return 1;
-    //}
-    /*
     if (ntdllBase == NULL) {
-        printf("Error %p\n", ntdllBase);
+        printf("Error ntdll.dll doesnt exist\n", ntdllBase);
     }
     else {
         POW pow = (POW)SelfGetProcAddress(ntdllBase, "pow");
         printf("%f\n", pow(2.0, 3.0));
     }
-    */
+
     /*
     FINDRESSOURCEA FindResourceW_ = (FINDRESSOURCEA)SelfGetProcAddress(kerneldllBase, "FindResourceW");
     HRSRC BmpRessource = FindResourceW_(NULL, MAKEINTRESOURCE(IDB_BITMAP1), MAKEINTRESOURCE(2));
