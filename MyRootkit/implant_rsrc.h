@@ -16,18 +16,19 @@ typedef struct _SYSTEM_LOAD_AND_CALL_IMAGE
 
 typedef
 NTSTATUS
-(__stdcall* ZWSETSYSTEMINFORMATION)(
-	DWORD SystemInformationClass,
-	PVOID SystemInformation,
-	ULONG SystemInformationLength
-	);
+(__stdcall* NTSETSYSTEMINFORMATION)(
+    IN SYSTEM_INFORMATION_CLASS SystemInformationClass,
+    IN PVOID SystemInformation,
+    IN ULONG SystemInformationLength
+);
 
 typedef
-VOID
+NTSTATUS
 (__stdcall* RTLINITUNICODESTRING)(
-	PUNICODE_STRING DestinationString,
-	PCWSTR SourceString
-	);
+    PUNICODE_STRING DestinationString,
+    PCWSTR SourceString
+    );
+
 typedef
 double
 (__stdcall* POW)(
