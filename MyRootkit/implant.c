@@ -109,40 +109,43 @@ int main() {
     }
     printf("\nFinish !\n");
     */
-    //char aPath[1024];
-    //char aCurrentDir[512];
-    SC_HANDLE sh = OpenSCManagerW(NULL, NULL, SC_MANAGER_ALL_ACCESS);
-    SC_HANDLE rh = CreateServiceW(sh, L"ROOTKIT.SYS", L"ROOTKIT.SYS", SERVICE_ALL_ACCESS, SERVICE_KERNEL_DRIVER, SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL, L"C:\\ROOTKIT.SYS", NULL, NULL, NULL, NULL, NULL);
-    if (!rh) {
-        if (GetLastError() == ERROR_SERVICE_EXISTS) {
-            rh = OpenService(sh, L"ROOTKIT.SYS", SERVICE_ALL_ACCESS);
-            if (!rh) {
-                printf("Error OpenService 1 !!! %d", GetLastError());
-                return false;
-            }
-        }
-        else {
-            
-            printf("Unknow Error 1 !!! %d", GetLastError());
-            CloseServiceHandle(sh);
-            return false;
-        }
+    SC_HANDLE service, scm;
+    SERVICE_STATUS status;
+
+    scm = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+    if (!scm) {
+        printf("Impossible d'ouvrir le gestionnaire de contrôle des services. Erreur %d\n", GetLastError());
+        return 1;
     }
-    puts("CreateService worked!!!\n");
-    if (StartService(rh, 0, NULL) == 0) {
-        if (ERROR_SERVICE_ALREADY_RUNNING == GetLastError()) {
-            printf("Service Already Exist !!!");
-            return false;
-        }
-        else {
-            printf("StartService error: %d\n", GetLastError());
-            CloseServiceHandle(sh);
-            CloseServiceHandle(rh);
-            return false;
-        }
+
+    service = CreateServiceW(scm, L"testrootkit1", L"testrootkit1", SERVICE_ALL_ACCESS, SERVICE_KERNEL_DRIVER, SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL, L"C:\\ROOTKIT.SYS", NULL, NULL, NULL, NULL, NULL);
+    if (!service) {
+        printf("Impossible de charger le driver. Erreur %d\n", GetLastError());
+        CloseServiceHandle(scm);
+        return 1;
     }
-    CloseServiceHandle(sh);
-    CloseServiceHandle(rh);
-    printf("Loading Success !!!\n");
-    return true;
+
+    if (!StartService(service, 0, NULL)) {
+        printf("Impossible de demarrer le driver. Erreur %d\n", GetLastError());
+        CloseServiceHandle(service);
+        CloseServiceHandle(scm);
+        return 1;
+    }
+
+    printf("Driver charge et demarre avec succes.\n");
+    system("PAUSE");
+    if (!ControlService(service, SERVICE_CONTROL_STOP, &status)) {
+        printf("Impossible d'arrêter le driver. Erreur %d\n", GetLastError());
+    }
+
+    if (!DeleteService(service)) {
+        printf("Impossible de supprimer le driver. Erreur %d\n", GetLastError());
+    }
+
+    CloseServiceHandle(service);
+    CloseServiceHandle(scm);
+
+    printf("Driver déchargé avec succès.\n");
+
+    return 0;
 }
