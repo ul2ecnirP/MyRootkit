@@ -147,7 +147,7 @@ int main() {
     CloseServiceHandle(service);
     CloseServiceHandle(scm);
 
-    printf("Driver déchargé avec succès.\n");
+    printf("Driver décharge avec succes.\n");
 
     return 0;
 }
