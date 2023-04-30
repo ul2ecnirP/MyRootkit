@@ -120,7 +120,7 @@ int main() {
         return 1;
     }
 
-    service = CreateServiceW(scm, L"MyRootkit", L"MyRootkit", SERVICE_ALL_ACCESS, SERVICE_KERNEL_DRIVER, SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL, L"C:\\Users\\Prince2lu\\source\\repos\\MyRootkit\\x64\\Debug\\RootKitDriver.sys", NULL, NULL, NULL, NULL, NULL);
+    service = CreateServiceW(scm, L"MyRootkit4", L"MyRootkit4", SERVICE_ALL_ACCESS, SERVICE_KERNEL_DRIVER, SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL, L"C:\\Users\\user\\source\\repos\\ul2ecnirP\\MyRootkit\\x64\\Debug\\RootKitDriver.sys", NULL, NULL, NULL, NULL, NULL);
     if (!service) {
         printf("Impossible de charger le driver. Erreur %d\n", GetLastError());
         CloseServiceHandle(scm);
