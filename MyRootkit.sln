@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MyRootkit", "MyRootkit\MyRo
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RootKitDriver", "RootKitDriver\RootKitDriver.vcxproj", "{546AC2DD-DEC9-4C17-90FD-E3039A454E2F}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EvilProc", "EvilProc\EvilProc.vcxproj", "{6E0EAB41-A017-49D1-A47C-D561E6B61ACD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM64 = Debug|ARM64
@@ -47,6 +49,18 @@ Global
 		{546AC2DD-DEC9-4C17-90FD-E3039A454E2F}.Release|x86.ActiveCfg = Release|x64
 		{546AC2DD-DEC9-4C17-90FD-E3039A454E2F}.Release|x86.Build.0 = Release|x64
 		{546AC2DD-DEC9-4C17-90FD-E3039A454E2F}.Release|x86.Deploy.0 = Release|x64
+		{6E0EAB41-A017-49D1-A47C-D561E6B61ACD}.Debug|ARM64.ActiveCfg = Debug|x64
+		{6E0EAB41-A017-49D1-A47C-D561E6B61ACD}.Debug|ARM64.Build.0 = Debug|x64
+		{6E0EAB41-A017-49D1-A47C-D561E6B61ACD}.Debug|x64.ActiveCfg = Debug|x64
+		{6E0EAB41-A017-49D1-A47C-D561E6B61ACD}.Debug|x64.Build.0 = Debug|x64
+		{6E0EAB41-A017-49D1-A47C-D561E6B61ACD}.Debug|x86.ActiveCfg = Debug|Win32
+		{6E0EAB41-A017-49D1-A47C-D561E6B61ACD}.Debug|x86.Build.0 = Debug|Win32
+		{6E0EAB41-A017-49D1-A47C-D561E6B61ACD}.Release|ARM64.ActiveCfg = Release|x64
+		{6E0EAB41-A017-49D1-A47C-D561E6B61ACD}.Release|ARM64.Build.0 = Release|x64
+		{6E0EAB41-A017-49D1-A47C-D561E6B61ACD}.Release|x64.ActiveCfg = Release|x64
+		{6E0EAB41-A017-49D1-A47C-D561E6B61ACD}.Release|x64.Build.0 = Release|x64
+		{6E0EAB41-A017-49D1-A47C-D561E6B61ACD}.Release|x86.ActiveCfg = Release|Win32
+		{6E0EAB41-A017-49D1-A47C-D561E6B61ACD}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
