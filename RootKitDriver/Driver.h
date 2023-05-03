@@ -11,7 +11,7 @@ int SearchAndRemoveEPROCESSbyOffset(int offset, char* target);
 DRIVER_INITIALIZE DriverEntry;
 
 
-#pragma warning (disable : 4100 4201)
+#pragma warning (disable : 4100 4201 6387 6011 4996 4311 4152)
 typedef struct _EX_FAST_REF
 {
     union

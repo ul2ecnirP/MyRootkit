@@ -14,13 +14,7 @@ typedef struct _SYSTEM_LOAD_AND_CALL_IMAGE
 	UNICODE_STRING ModuleName;
 } SYSTEM_LOAD_AND_CALL_IMAGE, * PSYSTEM_LOAD_AND_CALL_IMAGE;
 
-typedef
-NTSTATUS
-(__stdcall* NTSETSYSTEMINFORMATION)(
-    IN SYSTEM_INFORMATION_CLASS SystemInformationClass,
-    IN PVOID SystemInformation,
-    IN ULONG SystemInformationLength
-);
+
 
 typedef
 NTSTATUS
