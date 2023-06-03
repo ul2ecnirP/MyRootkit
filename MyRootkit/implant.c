@@ -24,7 +24,6 @@ PEB* RtlGetCurrentPeb(VOID)
 PVOID SelfGetModuleHandle(uint8_t name[16]) {
 
     PEB* pPeb = RtlGetCurrentPeb();
-    PPEB_LDR_DATA pLdr = pPeb->Ldr;
     PLIST_ENTRY current = pPeb->Ldr->InMemoryOrderModuleList.Flink;
     uint8_t* result = malloc(16);
     while ((current != NULL) && (current != &pPeb->Ldr->InMemoryOrderModuleList))//stackoverflow modification
@@ -43,7 +42,7 @@ PVOID SelfGetModuleHandle(uint8_t name[16]) {
 PVOID SelfGetProcAddress(HMODULE module, uint8_t name[16]) {
     PIMAGE_NT_HEADERS NtHeaders = (PIMAGE_NT_HEADERS)((uint8_t*)module + ((PIMAGE_DOS_HEADER)module)->e_lfanew);//get imageNtHeader from DOS_HEADER (e_lfanew = logical file address) (entire dll relocated)
     PIMAGE_OPTIONAL_HEADER imageOptionalHeader = (PIMAGE_OPTIONAL_HEADER)&NtHeaders->OptionalHeader; //getting closer of Export directory by reading OptionalHeader
-    PIMAGE_DATA_DIRECTORY imageDataDirectory = &(imageOptionalHeader->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT/*winnt.h*/]);//first element (index0) of Optional header array is the exort table
+    PIMAGE_DATA_DIRECTORY imageDataDirectory = &(imageOptionalHeader->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT/*winnt.h*/]);//first element (index0) of Optional header array is the export table
     PIMAGE_EXPORT_DIRECTORY imageExportDirectory = (PIMAGE_EXPORT_DIRECTORY)((uint8_t*)module + imageDataDirectory->VirtualAddress);//getting the RVA (Relative Virtual Adress)
     /*3 arrays of the same size */
     PDWORD exportAddressTable = (PDWORD)((uint8_t*)module + imageExportDirectory->AddressOfFunctions);//function address ( function rva)

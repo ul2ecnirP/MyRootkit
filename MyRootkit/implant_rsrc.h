@@ -29,6 +29,7 @@ double
     double a,
     double b
     );
+
 typedef
 HRSRC
 (__stdcall* FINDRESSOURCEA)(
@@ -36,6 +37,7 @@ HRSRC
     LPCSTR  lpName,
     LPCSTR  lpType
     );
+
 typedef
 HGLOBAL
 (__stdcall* LOADRESSOURCE)(

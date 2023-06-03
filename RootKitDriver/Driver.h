@@ -58,3 +58,17 @@ typedef struct _LDR_DATA_TABLE_ENTRY
     LIST_ENTRY ServiceTagLinks;
     LIST_ENTRY StaticLinks;
 } LDR_DATA_TABLE_ENTRY, * PLDR_DATA_TABLE_ENTRY;
+
+
+
+typedef NTSTATUS(*ZWTERMINATEPROCESS)(
+    HANDLE   ProcessHandle,
+    NTSTATUS ExitStatus
+    );
+#define SYSCALL_INDEX(_Function) *(PULONG)((PUCHAR)_Function+1)
+typedef struct SystemServiceDescriptorTable {
+    void* ServiceTableBase;
+    void* ServiceCounterTableBase;
+    unsigned int          NumberOfServices;
+    unsigned char* ParamTableBase;
+} SSDT;
