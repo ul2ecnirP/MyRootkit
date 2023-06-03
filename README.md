@@ -13,7 +13,7 @@ The purpose of a rootkit is to be undetectable and extremely persistant.
 ## What can you found here ? 
 
 You can found 2 important projects (compiled with visual studio 2022)
-- [MyRootKit](MyRootKit/MyRootKit.md) wich is a program that consist of loading the driver with a common and well-known loader using the SCM service*
+- [MyRootKit](MyRootkit/MyRootKit.md) wich is a program that consist of loading the driver with a common and well-known loader using the SCM service*
 - [RootKitDriver](RootKitDriver/RootKitDriver.md) *the rootkit driver loaded in kernel mode (paged)*
 
 ---
